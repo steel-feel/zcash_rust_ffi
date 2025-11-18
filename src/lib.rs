@@ -5,17 +5,21 @@ use secrecy::{ExposeSecret as _, SecretString, SecretVec, Zeroize};
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tonic::transport::Channel;
+use zcash_client_sqlite::WalletDb;
 
 use std::os::raw::c_uchar;
 use std::str;
 use std::{os, slice};
 
+use libc::c_char;
+use std::ffi::{CStr, CString};
 use zcash_client_backend::{
-    data_api::{AccountBirthday, WalletWrite},
+    data_api::{Account, AccountBirthday, WalletRead, WalletWrite},
     proto::service::{self, compact_tx_streamer_client::CompactTxStreamerClient},
 };
 use zcash_protocol::consensus::{self, BlockHeight, Parameters};
 
+use crate::data::get_db_paths;
 // use crate::{config::WalletConfig, remote::Servers};
 
 mod config;
@@ -111,6 +115,23 @@ pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
     )
 }
 
+pub async fn list_accounts(wallet_name: String) -> Result<(), anyhow::Error> {
+    let wallet_dir: Option<String> = Some(wallet_name.to_owned());
+    let params = consensus::Network::MainNetwork;
+    let (_, db_data) = get_db_paths(wallet_dir.as_ref());
+    let db_data = WalletDb::for_path(db_data, params, (), ())?;
+
+    for account_id in db_data.get_account_ids()?.iter() {
+        let account = db_data.get_account(*account_id)?.unwrap();
+        println!("Account {}", account_id.expose_uuid());
+        if let Some(name) = account.name() {
+            println!("Name: {name}");
+        }
+    }
+
+    Ok(())
+}
+
 async fn get_wallet_birthday(
     mut client: CompactTxStreamerClient<Channel>,
     birthday_height: BlockHeight,
@@ -160,4 +181,43 @@ pub extern "C" fn go_create_wallet(ptr: *const std::os::raw::c_char) {
             println!("Failed to create wallet")
         }
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn go_list_accounts(ptr: *const std::os::raw::c_char) {
+      let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+    unsafe {
+        let c_str = std::ffi::CStr::from_ptr(ptr);
+        let r_str = c_str.to_str().expect("Invalid Utf-8");
+
+        let result = rt.block_on(list_accounts(r_str.to_string()));
+
+        if result.is_err() {
+            println!("Failed to list account of wallet")
+        }
+    }
+}
+
+/// return string
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn get_string() -> *mut c_char {
+    let rust_string = String::from("Hello from Rust!");
+    // Convert Rust String to C string
+    let c_string = match CString::new(rust_string) {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    // Transfer ownership to caller
+    c_string.into_raw()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn free_string(s: *mut c_char) {
+    if s.is_null() {
+        return;
+    }
+    // Reclaim ownership and drop
+    unsafe { CString::from_raw(s) };
 }

@@ -4852,6 +4852,7 @@ dependencies = [
  "iso_currency",
  "jubjub",
  "lazy_static",
+ "libc",
  "minicbor",
  "nokhwa",
  "nonempty",

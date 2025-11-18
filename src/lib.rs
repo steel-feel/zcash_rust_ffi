@@ -6,6 +6,10 @@ use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tonic::transport::Channel;
 
+use std::os::raw::c_uchar;
+use std::str;
+use std::{os, slice};
+
 use zcash_client_backend::{
     data_api::{AccountBirthday, WalletWrite},
     proto::service::{self, compact_tx_streamer_client::CompactTxStreamerClient},
@@ -19,20 +23,8 @@ mod data;
 mod error;
 mod remote;
 
-// mod config;
-// mod remote;
-// mod data;
-// mod error;
-
-// use crate::{
-//     config::WalletConfig,
-//     //data::{init_dbs, Network},
-//     // error,
-//     remote::{tor_client, Servers},
-// };
-
-pub async fn create_wallet() -> Result<(), anyhow::Error> {
-    let wallet_dir = Some(String::from("./something/"));
+pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
+    let wallet_dir = Some(wallet_name.to_owned());
     let network = consensus::Network::MainNetwork;
     let params = consensus::Network::from(network);
 
@@ -48,16 +40,11 @@ pub async fn create_wallet() -> Result<(), anyhow::Error> {
         .try_into()
         .expect("block heights must fit into u32");
 
-    println!(" chain tip {:?}", chain_tip.to_u32());
-    // let recipients = if tokio::fs::try_exists(&opts.identity).await? {
+    println!(" Blocknumber {:?}", chain_tip.to_u32());
 
-    // let identity_file_name = String::from("./new_wallet");
-    
     let mut path = PathBuf::from(wallet_dir.to_owned().unwrap());
     path.push("wallet");
     let identity_file_name = path.into_os_string().into_string().unwrap();
-    
-    println!("path {:?}", identity_file_name);
 
     let recipients: Vec<Box<dyn Recipient + Send>> =
         if tokio::fs::try_exists(&identity_file_name).await? {
@@ -112,7 +99,7 @@ pub async fn create_wallet() -> Result<(), anyhow::Error> {
         SecretVec::new(secret)
     };
 
-    let wallet_name = "new_wallet";
+    let wallet_name = "wallet";
 
     init_dbs(
         params,
@@ -160,13 +147,17 @@ fn init_dbs(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn add_numbers(a: i32, b: i32) -> i32 {
+pub extern "C" fn go_create_wallet(ptr: *const std::os::raw::c_char) {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-    let result = rt.block_on(create_wallet());
 
-    if result.is_err() {
-        println!("Failed to create Tokio runtime")
+    unsafe {
+        let c_str = std::ffi::CStr::from_ptr(ptr);
+        let r_str = c_str.to_str().expect("Invalid Utf-8");
+
+        let result = rt.block_on(create_wallet(r_str.to_string()));
+
+        if result.is_err() {
+            println!("Failed to create wallet")
+        }
     }
-
-    a + b
 }

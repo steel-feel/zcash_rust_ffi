@@ -1,27 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"unsafe"
 )
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/target/release -lrust_ffi_go
 #include <stdlib.h>
 
-int add_numbers(int a, int b);
+void go_create_wallet(const char* str);
 */
 import "C"
 
 func main() {
-	// num := int(time.Now().UnixMicro())
-	// Seed(num)
-	// fmt.Printf("Random number with %v from C %v \n", num,Random())
-	// a := int32(1) 
-	// b := int32(2)
-	a := 1
-	b := 2
-	c := int(C.add_numbers(C.int(a),C.int(b)))
+	myString := "hello"
+	cs := C.CString(myString)
 
-	fmt.Printf("Addition of number %v + %v = %v \n",a,b,c)
+	defer C.free(unsafe.Pointer(cs))
 
+	C.go_create_wallet(cs)
 }

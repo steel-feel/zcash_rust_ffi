@@ -1,5 +1,8 @@
 use anyhow::anyhow;
 use bip0039::{English, Mnemonic};
+use uuid::Uuid;
+use zcash_client_backend::data_api::WalletRead;
+use zcash_client_sqlite::AccountUuid;
 use std::fs::{self, File};
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
@@ -214,3 +217,30 @@ pub(crate) fn get_wallet_seed<'a, P: AsRef<Path>>(
     let mut config = WalletConfig::read(wallet_dir)?;
     config.decrypt_seed(identities)
 }
+
+pub(crate) fn select_account<DbT: WalletRead<AccountId = AccountUuid>>(
+    db_data: &DbT,
+    account_uuid: Option<Uuid>,
+) -> Result<DbT::Account, anyhow::Error>
+where
+    DbT::Error: std::error::Error + Sync + Send + 'static,
+{
+    let account_id = match account_uuid {
+        Some(uuid) => Ok(AccountUuid::from_uuid(uuid)),
+        None => {
+            let account_ids = db_data.get_account_ids()?;
+            match &account_ids[..] {
+                [] => Err(anyhow!("Wallet contains no accounts.")),
+                [account_id] => Ok(*account_id),
+                _ => Err(anyhow!(
+                    "More than one account is available; please specify the account UUID."
+                )),
+            }
+        }
+    }?;
+
+    db_data
+        .get_account(account_id)?
+        .ok_or(anyhow!("Account missing: {:?}", account_id))
+}
+

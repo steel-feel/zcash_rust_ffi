@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "fmt"
 	"fmt"
 	"unsafe"
 )
@@ -13,47 +12,62 @@ void go_create_wallet(const char* str);
 typedef struct { char* uuid; char* uivk; char* uifk; char* source; } CAccount;
 typedef struct { CAccount* ptr; size_t len; } CAccountArray;
 CAccountArray go_list_accounts(const char* str);
+char* go_get_address(const char* ptr, const char* uuid);
 void free_struct_array(CAccountArray);
+void free_string(const char* s);
 */
 import "C"
 
 func main() {
-	
+
 	/// Play string
-	myString := "hello"
-	cs := C.CString(myString)
+	wallet_dir := "hello"
+	c_wallet_dir := C.CString(wallet_dir)
 
-	defer C.free(unsafe.Pointer(cs))
+	uuid := "c39208d5-4bbc-4d2c-8619-9f4a7c243fe4"
+	c_uuid :=  C.CString(uuid)
 
-//	C.go_create_wallet(cs)
-  accArray := C.go_list_accounts(cs)
-  defer C.free_struct_array(accArray)
+	defer C.free(unsafe.Pointer(c_wallet_dir))
+	defer C.free(unsafe.Pointer(c_uuid))
 
-    goSlice := (*[1 << 28]C.CAccount)(unsafe.Pointer(accArray.ptr))[:accArray.len:accArray.len]
-    // result := make([]YourGoStruct, arr.len)
-    for _, s := range goSlice {
-        // result[i] = YourGoStruct{
-        //     Field1: C.GoString(s.field1),
-        //     Field2: C.GoString(s.field2),
-        //     Field3: C.GoString(s.field3),
-        //     Field4: C.GoString(s.field4),
-        // }
+	/// Create wallet
+	//C.go_create_wallet(cs)
+	
+	///list accounts
+	/*
+	accArray := C.go_list_accounts(cs)
+	defer C.free_struct_array(accArray)
 
-		fmt.Printf("UUid %v \n",  C.GoString(s.uuid))
-    }	
+	goSlice := (*[1 << 28]C.CAccount)(unsafe.Pointer(accArray.ptr))[:accArray.len:accArray.len]
+	// result := make([]YourGoStruct, arr.len)
+	for _, s := range goSlice {
+		fmt.Printf("uuid %v \n uivk %v \n uifk %v \n source %v \n",
+			C.GoString(s.uuid),
+			C.GoString(s.uivk),
+			C.GoString(s.uifk),
+			C.GoString(s.source))
+	}
+	*/
+	/// list addresses
+	C_accAddress := C.go_get_address(c_wallet_dir,c_uuid )
+	defer C.free_string(C_accAddress)
+    accAddress := C.GoString(C_accAddress)
+
+	fmt.Printf("Account Address %v \n", accAddress)
+
 
 	/*
-	/// Get string
-	cStr := C.get_string()
-    if cStr == nil {
-        println("Empty string")
-		return
-    }
-    defer C.free_string(cStr)
-    
-    // Convert C string to Go string
-    goStr := C.GoString(cStr)
-	fmt.Printf("string from rust %v \n", goStr )
+			/// Get string
+			cStr := C.get_string()
+		    if cStr == nil {
+		        println("Empty string")
+				return
+		    }
+		    defer C.free_string(cStr)
+
+		    // Convert C string to Go string
+		    goStr := C.GoString(cStr)
+			fmt.Printf("string from rust %v \n", goStr )
 	*/
 
 

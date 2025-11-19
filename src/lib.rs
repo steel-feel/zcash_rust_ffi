@@ -5,10 +5,12 @@ use secrecy::{ExposeSecret as _, SecretString, SecretVec, Zeroize};
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tonic::transport::Channel;
+use uuid::Uuid;
 use zcash_client_sqlite::WalletDb;
+use zcash_keys::keys::UnifiedAddressRequest;
 
 use std::os::raw::c_uchar;
-use std::str;
+use std::str::{self, FromStr};
 use std::{os, slice};
 
 use libc::c_char;
@@ -19,6 +21,7 @@ use zcash_client_backend::{
 };
 use zcash_protocol::consensus::{self, BlockHeight, Parameters};
 
+use crate::config::{get_wallet_network, select_account};
 use crate::data::get_db_paths;
 // use crate::{config::WalletConfig, remote::Servers};
 
@@ -122,9 +125,29 @@ pub struct VAccount {
     pub source: String,
 }
 
+pub struct VAccountAddress {
+    pub uuid: String,
+    pub address: String,
+}
+
+pub fn get_address(wallet_name: String, uuid: String) -> Result<String, anyhow::Error> {
+    let wallet_dir: Option<String> = Some(wallet_name.to_owned());
+    let params = get_wallet_network(wallet_dir.as_ref())?;
+    let (_, db_data) = get_db_paths(wallet_dir.as_ref());
+    let db_data = WalletDb::for_path(db_data, params, (), ())?;
+    let account_id = Some(Uuid::from_str(&uuid)?);
+    let account = select_account(&db_data, account_id)?;
+    let (ua, _) = account
+        .uivk()
+        .default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+
+    Ok(ua.encode(&params))
+}
+
 pub fn list_accounts(wallet_name: String) -> Result<Vec<VAccount>, anyhow::Error> {
     let wallet_dir: Option<String> = Some(wallet_name.to_owned());
-    let params = consensus::Network::TestNetwork;
+    let params = get_wallet_network(wallet_dir.as_ref())?;
+
     let (_, db_data) = get_db_paths(wallet_dir.as_ref());
     let db_data = WalletDb::for_path(db_data, params, (), ())?;
 
@@ -243,7 +266,39 @@ pub extern "C" fn go_list_accounts(ptr: *const std::os::raw::c_char) -> CAccount
     }
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn go_get_address(
+    ptr: *const std::os::raw::c_char,
+    uuid: *const std::os::raw::c_char,
+) -> *mut c_char {
+    unsafe {
+        let c_ptr_str = std::ffi::CStr::from_ptr(ptr);
+        let wallet_dir = c_ptr_str.to_str().expect("Invalid Utf-8");
+
+        let c_uuid_str = std::ffi::CStr::from_ptr(uuid);
+        let uuid_str = c_uuid_str.to_str().expect("Invalid Utf-8");
+
+        let rust_string = get_address(wallet_dir.to_owned(), uuid_str.to_owned()).unwrap();
+        // Convert Rust String to C string
+        let c_string = match CString::new(rust_string) {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        // Transfer ownership to caller
+        c_string.into_raw()
+    }
+}
+
 //~~~~ free memory
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn free_string(s: *mut c_char) {
+    if s.is_null() {
+        return;
+    }
+    // Reclaim ownership and drop
+    unsafe { CString::from_raw(s) };
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn free_struct_array(arr: CAccountArray) {
@@ -265,27 +320,4 @@ pub extern "C" fn free_struct_array(arr: CAccountArray) {
         }
         let _ = Vec::from_raw_parts(arr.ptr, arr.len, arr.len);
     }
-}
-
-/// return string
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn get_string() -> *mut c_char {
-    let rust_string = String::from("Hello from Rust!");
-    // Convert Rust String to C string
-    let c_string = match CString::new(rust_string) {
-        Ok(s) => s,
-        Err(_) => return std::ptr::null_mut(),
-    };
-
-    // Transfer ownership to caller
-    c_string.into_raw()
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn free_string(s: *mut c_char) {
-    if s.is_null() {
-        return;
-    }
-    // Reclaim ownership and drop
-    unsafe { CString::from_raw(s) };
 }

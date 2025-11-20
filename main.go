@@ -9,7 +9,7 @@ import (
 #cgo LDFLAGS: -L${SRCDIR}/target/release -lrust_ffi_go
 #include <stdlib.h>
 void go_create_wallet(const char* str);
-typedef struct { char* uuid; char* uivk; char* uifk; char* source; } CAccount;
+typedef struct { char* uuid; char* uivk; char* ufvk; char* source; } CAccount;
 typedef struct { CAccount* ptr; size_t len; } CAccountArray;
 CAccountArray go_list_accounts(const char* str);
 char* go_get_address(const char* ptr, const char* uuid);
@@ -35,20 +35,21 @@ func main() {
 	
 	///list accounts
 	/*
-	accArray := C.go_list_accounts(cs)
+	accArray := C.go_list_accounts(c_wallet_dir)
 	defer C.free_struct_array(accArray)
 
 	goSlice := (*[1 << 28]C.CAccount)(unsafe.Pointer(accArray.ptr))[:accArray.len:accArray.len]
 	// result := make([]YourGoStruct, arr.len)
 	for _, s := range goSlice {
-		fmt.Printf("uuid %v \n uivk %v \n uifk %v \n source %v \n",
+		fmt.Printf("uuid %v \n uivk %v \n ufvk %v \n source %v \n",
 			C.GoString(s.uuid),
 			C.GoString(s.uivk),
-			C.GoString(s.uifk),
+			C.GoString(s.ufvk),
 			C.GoString(s.source))
 	}
 	*/
-	/// list addresses
+	/// Get address
+	
 	C_accAddress := C.go_get_address(c_wallet_dir,c_uuid )
 	defer C.free_string(C_accAddress)
     accAddress := C.GoString(C_accAddress)

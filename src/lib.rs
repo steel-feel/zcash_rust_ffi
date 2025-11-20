@@ -121,7 +121,7 @@ pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
 pub struct VAccount {
     pub uuid: String,
     pub uivk: String,
-    pub uifk: String,
+    pub ufvk: String,
     pub source: String,
 }
 
@@ -141,7 +141,13 @@ pub fn get_address(wallet_name: String, uuid: String) -> Result<String, anyhow::
         .uivk()
         .default_address(UnifiedAddressRequest::AllAvailableKeys)?;
 
-    Ok(ua.encode(&params))
+   println!("t-address {}", ua.transparent().unwrap().to_zcash_address(params.network_type())    );
+   println!("z-address {:?}", ua.orchard().unwrap());
+
+    /// Note: below gives same thing
+    // ua.to_zcash_address(params.network_type()).to_string();
+
+    Ok( ua.encode(&params))
 }
 
 pub fn list_accounts(wallet_name: String) -> Result<Vec<VAccount>, anyhow::Error> {
@@ -155,13 +161,16 @@ pub fn list_accounts(wallet_name: String) -> Result<Vec<VAccount>, anyhow::Error
     for account_id in db_data.get_account_ids()?.iter() {
         let account = db_data.get_account(*account_id)?.unwrap();
 
+
+       
+
         accounts_list.push(VAccount {
             uuid: account_id.expose_uuid().to_string(),
             uivk: account.uivk().encode(&params),
-            uifk: account
+            ufvk: account
                 .ufvk()
                 .map_or("None".to_owned(), |k| k.encode(&params)),
-            source: format!("{:?}", account.source()),
+            source: format!("{:?}",  account.source().key_derivation().unwrap().seed_fingerprint().to_string() ),
         });
     }
 
@@ -209,7 +218,7 @@ fn init_dbs(
 pub struct CAccount {
     uuid: *mut c_char,
     uivk: *mut c_char,
-    uifk: *mut c_char,
+    ufvk: *mut c_char,
     source: *mut c_char,
 }
 
@@ -252,7 +261,7 @@ pub extern "C" fn go_list_accounts(ptr: *const std::os::raw::c_char) -> CAccount
             .into_iter()
             .map(|obj| CAccount {
                 uuid: CString::new(obj.uuid).unwrap().into_raw(),
-                uifk: CString::new(obj.uifk).unwrap().into_raw(),
+                ufvk: CString::new(obj.ufvk).unwrap().into_raw(),
                 uivk: CString::new(obj.uivk).unwrap().into_raw(),
                 source: CString::new(obj.source).unwrap().into_raw(),
             })
@@ -308,8 +317,8 @@ pub extern "C" fn free_struct_array(arr: CAccountArray) {
             if !item.uuid.is_null() {
                 let _ = CString::from_raw(item.uuid);
             }
-            if !item.uifk.is_null() {
-                let _ = CString::from_raw(item.uifk);
+            if !item.ufvk.is_null() {
+                let _ = CString::from_raw(item.ufvk);
             }
             if !item.uivk.is_null() {
                 let _ = CString::from_raw(item.uivk);

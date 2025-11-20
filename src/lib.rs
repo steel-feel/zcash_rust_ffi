@@ -23,12 +23,14 @@ use zcash_protocol::consensus::{self, BlockHeight, Parameters};
 
 use crate::config::{get_wallet_network, select_account};
 use crate::data::get_db_paths;
+use crate::sync::sync;
 // use crate::{config::WalletConfig, remote::Servers};
 
 mod config;
 mod data;
 mod error;
 mod remote;
+mod sync;
 
 pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
     let wallet_dir = Some(wallet_name.to_owned());
@@ -297,6 +299,24 @@ pub unsafe extern "C" fn go_get_address(
         // Transfer ownership to caller
         c_string.into_raw()
     }
+}
+
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn go_sync(ptr: *const std::os::raw::c_char){
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+    unsafe {
+        let c_str = std::ffi::CStr::from_ptr(ptr);
+        let r_str = c_str.to_str().expect("Invalid Utf-8");
+
+        let result = rt.block_on(sync(r_str.to_string()));
+
+        if result.is_err() {
+            println!("Failed to sync wallet")
+        }
+    }
+
 }
 
 //~~~~ free memory

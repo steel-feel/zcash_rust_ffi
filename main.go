@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"unsafe"
 )
 
@@ -9,6 +9,7 @@ import (
 #cgo LDFLAGS: -L${SRCDIR}/target/release -lrust_ffi_go
 #include <stdlib.h>
 void go_create_wallet(const char* str);
+void go_sync(const char* str);
 typedef struct { char* uuid; char* uivk; char* ufvk; char* source; } CAccount;
 typedef struct { CAccount* ptr; size_t len; } CAccountArray;
 CAccountArray go_list_accounts(const char* str);
@@ -49,13 +50,16 @@ func main() {
 	}
 	*/
 	/// Get address
-	
+	/*
 	C_accAddress := C.go_get_address(c_wallet_dir,c_uuid )
 	defer C.free_string(C_accAddress)
     accAddress := C.GoString(C_accAddress)
 
 	fmt.Printf("Account Address %v \n", accAddress)
+*/
 
+/// Sync Wallet
+C.go_sync(c_wallet_dir)
 
 	/*
 			/// Get string

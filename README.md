@@ -11,3 +11,8 @@ cargo build --release
 ```shell
 go run .
 ```
+
+3549
+
+354939
+3685675

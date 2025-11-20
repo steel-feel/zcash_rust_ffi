@@ -8,7 +8,7 @@ use rand::rngs::OsRng;
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinHandle};
 
 use tonic::transport::Channel;
-use tracing::{debug, error, info};
+use tracing::{ error, info};
 use zcash_client_backend::{
     data_api::{
         WalletCommitmentTrees, WalletRead, WalletWrite,
@@ -31,7 +31,7 @@ use crate::{
     config::get_wallet_network,
     data::{get_block_path, get_db_paths},
     error,
-    remote::{self, Servers},
+    remote::{self},
 };
 
 use {
@@ -170,7 +170,6 @@ pub async fn sync(wallet_name: String) -> Result<(), anyhow::Error> {
         let chain_state =
             download_chain_state(&mut client, scan_range.block_range().start - 1).await?;
 
-        /// Scan the downloaded blocks.
         let scan_ranges_updated = scan_blocks(
             &params,
             &fsblockdb_root,

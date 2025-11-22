@@ -12,14 +12,14 @@ bip0039 = { version = "0.12", features = ["std", "all-languages"] }
 bip32 = { version = "=0.6.0-pre.1", default-features = false, features = ["secp256k1-ffi"] }
 futures-util = "0.3"
 hex = "0.4"
-jubjub = "0.10"
-nonempty = { version = "0.11", default-features = false }
+# jubjub = "0.10"
+# nonempty = { version = "0.11", default-features = false }
 prost = "0.13"
-rayon = "1.7"
-ripemd = "0.1"
+# rayon = "1.7"
+# ripemd = "0.1"
 rusqlite = { version = "0.32", features = ["time"] }
-schemerz = "0.2"
-secp256k1 = { version = "0.29", features = ["serde"] }
+# schemerz = "0.2"
+# secp256k1 = { version = "0.29", features = ["serde"] }
 secrecy = "0.8"
 serde = "1.0"
 time = "0.3"
@@ -32,7 +32,7 @@ uuid = "1"
 zcash_script = "0.4"
 
 orchard = { version = "0.11", default-features = false }
-pczt = "0.4"
+# pczt = "0.4"
 sapling = { package = "sapling-crypto", version = "0.5" }
 transparent = { package = "zcash_transparent", version = "0.6", features = ["test-dependencies"] }
 zcash_address = "0.10"
@@ -52,17 +52,17 @@ rand = { version = "0.8", default-features = false }
 # Seed encryption
 age = { version = "0.11", features = ["armor", "plugin"] }
 chrono = "0.4"
-rpassword = "7"
+# rpassword = "7"
 
 # Currency conversion
-iso_currency = { version = "0.5", features = ["with-serde"] }
+# iso_currency = { version = "0.5", features = ["with-serde"] }
 rust_decimal = "1"
 
 # Inspect
-bech32 = "0.11"
-bellman = "0.14"
-blake2b_simd = "1"
-bs58 = "0.5"
+# bech32 = "0.11"
+# bellman = "0.14"
+# blake2b_simd = "1"
+# bs58 = "0.5"
 ed25519-zebra = "4"
 equihash = "0.2"
 group = "0.13"
@@ -74,16 +74,16 @@ zcash_encoding = "0.3"
 zcash_note_encryption = "0.4.1"
 
 # PCZT QR codes
-image = { version = "0.25", optional = true }
-minicbor = { version = "0.19", optional = true }
-nokhwa = { version = "0.10", optional = true, features = ["input-native"] }
-qrcode = { version = "0.14", optional = true, default-features = false }
-rqrr = { version = "0.9", optional = true }
-ur = { version = "0.4", optional = true }
+# image = { version = "0.25", optional = true }
+# minicbor = { version = "0.19", optional = true }
+# nokhwa = { version = "0.10", optional = true, features = ["input-native"] }
+# qrcode = { version = "0.14", optional = true, default-features = false }
+# rqrr = { version = "0.9", optional = true }
+# ur = { version = "0.4", optional = true }
 
 # Tree exploration
-incrementalmerkletree = "0.8"
-shardtree = "0.6"
+# incrementalmerkletree = "0.8"
+# shardtree = "0.6"
 
 # TUI
 tokio-util = { version = "0.7", optional = true }
@@ -91,8 +91,6 @@ libc = "0.2.177"
 
 [features]
 default = ["transparent-inputs"]
-qr = ["dep:qrcode"]
-pczt-qr = ["dep:image", "dep:minicbor", "dep:nokhwa", "dep:qrcode", "dep:rqrr", "dep:ur"]
 transparent-inputs = [
     "zcash_client_sqlite/transparent-inputs",
 ]

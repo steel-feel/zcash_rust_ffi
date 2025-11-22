@@ -148,6 +148,7 @@ pub fn get_address(wallet_name: String, uuid: String) -> Result<String, anyhow::
         .uivk()
         .default_address(UnifiedAddressRequest::AllAvailableKeys)?;
 
+   
     println!(
         "t-address {}",
         ua.transparent()

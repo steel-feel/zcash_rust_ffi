@@ -26,12 +26,15 @@ import "C"
 func main() {
 
 	/// Play string
-	wallet_dir := "hello"
+	wallet_dir := "bob"
 	c_wallet_dir := C.CString(wallet_dir)
 
-	uuid := "c39208d5-4bbc-4d2c-8619-9f4a7c243fe4"
-	// uuid_bob := "1a8d1255-cf9c-46db-9d4a-2cb0035600db"
-	c_uuid := C.CString(uuid)
+	uuid_bob := "1a8d1255-cf9c-46db-9d4a-2cb0035600db"
+	c_uuid := C.CString(uuid_bob)
+
+
+//	uuid := "c39208d5-4bbc-4d2c-8619-9f4a7c243fe4"
+//	c_uuid := C.CString(uuid)
 
 	defer C.free(unsafe.Pointer(c_wallet_dir))
 	defer C.free(unsafe.Pointer(c_uuid))
@@ -55,38 +58,39 @@ func main() {
 		}
 	*/
 	/// Get address
-	/*
-			C_accAddress := C.go_get_address(c_wallet_dir,c_uuid )
-			defer C.free_string(C_accAddress)
-		    accAddress := C.GoString(C_accAddress)
+	
+		C_accAddress := C.go_get_address(c_wallet_dir, c_uuid)
+		defer C.free_string(C_accAddress)
+		accAddress := C.GoString(C_accAddress)
 
-			fmt.Printf("Account Address %v \n", accAddress)
-	*/
-
+		fmt.Printf("Account Address %v \n", accAddress)
+	
 	/// Sync Wallet
 
-	C.go_sync(c_wallet_dir)
+		C.go_sync(c_wallet_dir)
+	
+		/// Check wallet balance
+	//	j := C.go_balance(c_wallet_dir, c_uuid)
+	//	defer C.free_string(j.height)
 
-	/// Check wallet balance
-	j := C.go_balance(c_wallet_dir, c_uuid)
-	defer C.free_string(j.height)
-
-	fmt.Printf("Height %v \nOrchard %v \nUnsheilded  %v \nTotal %v \n", C.GoString(j.height), uint64(j.orchard), uint64(j.unshielded), uint64(j.total))
-
+	//	fmt.Printf("Height %v \nOrchard %v \nUnsheilded  %v \nTotal %v \n", C.GoString(j.height), uint64(j.orchard), uint64(j.unshielded), uint64(j.total))
+	
 	/// Send txn
+	/*
+	    toAddress := "utest1zu25404davj828zv0d3uwsdtvtuxyqq4xzn07zuwxcgp74qtkym4ugrgn63ptf9h9z3wk8sqcqfp3xfs88ssaaufusj52p2rl8u7p3ukjk35k4e7thk72kgpf3pfp2t92pcdwjtgffnugjdpaheqhvmexgy0wdsv469h29937tfen9rss0nhpn9qyyxtmsmrt3c0thvlg6mhgyp6hc8"
+	//	to_transparanet := "tmYdZ1utWG1MnLGpHNMEk6Rajx94VWvZajL"
+		
+		c_to := C.CString(toAddress)
+		defer C.free(unsafe.Pointer(c_to))
 
-	toAddress := "utest1zu25404davj828zv0d3uwsdtvtuxyqq4xzn07zuwxcgp74qtkym4ugrgn63ptf9h9z3wk8sqcqfp3xfs88ssaaufusj52p2rl8u7p3ukjk35k4e7thk72kgpf3pfp2t92pcdwjtgffnugjdpaheqhvmexgy0wdsv469h29937tfen9rss0nhpn9qyyxtmsmrt3c0thvlg6mhgyp6hc8"
-	c_to := C.CString(toAddress)
-	defer C.free(unsafe.Pointer(c_to))
+		value := C.uint64_t(3)
+		C_txn := C.go_send_txn(c_wallet_dir, c_uuid, c_to, value, C.uintptr_t(0), C.uint64_t(0), C.CString(""))
+		defer C.free_string(C_txn)
 
-	value := C.uint64_t(1)
-	C_txn := C.go_send_txn(c_wallet_dir, c_uuid, c_to, value, C.uintptr_t(0), C.uint64_t(0), C.CString(""))
-	defer C.free_string(C_txn)
+		txnId := C.GoString(C_txn)
 
-	txnId := C.GoString(C_txn)
-
-	fmt.Printf("txn Id %v \n", txnId)
-
+		fmt.Printf("txn Id %v \n", txnId)
+	*/
 	/*
 			/// Get string
 			cStr := C.get_string()

@@ -50,6 +50,7 @@ pub async fn send_txn(
 
     let (_, db_data) = get_db_paths(wallet_dir.as_ref());
     let mut db_data = WalletDb::for_path(db_data, params, SystemClock, OsRng)?;
+   
     let account = select_account(&db_data, account_id)?;
     let derivation = account
         .source()
@@ -145,7 +146,7 @@ pub async fn send_txn(
         .ok_or(anyhow!("Transaction not found for id {:?}", txid))?;
       println!("Done Raw transaction...");
     let response = client.send_transaction(raw_tx).await?.into_inner();
-      println!("txn. sent...{:?}", txid);
+      println!("txn sent...{:?}", txid);
 
     if response.error_code != 0 {
         Err(error::Error::SendFailed {

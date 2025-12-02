@@ -2,9 +2,9 @@ use age::{Recipient, secrecy::ExposeSecret};
 use bip0039::{Count, English, Mnemonic};
 use rust_decimal::prelude::ToPrimitive;
 use secrecy::{SecretVec, Zeroize};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use tonic::transport::Channel;
+use tonic::{ transport::Channel};
 use uuid::Uuid;
 use zcash_client_sqlite::WalletDb;
 use zcash_keys::keys::UnifiedAddressRequest;
@@ -12,18 +12,18 @@ use zcash_keys::keys::UnifiedAddressRequest;
 use std::str::{self, FromStr};
 
 use libc::c_char;
-use std::ffi::{ CString};
+use std::ffi::CString;
 use zcash_client_backend::{
     data_api::{Account, AccountBirthday, WalletRead, WalletWrite},
     proto::service::{self, compact_tx_streamer_client::CompactTxStreamerClient},
 };
 use zcash_protocol::consensus::{self, BlockHeight, Parameters};
 
-use crate::balance::wallet_balance;
 use crate::config::{get_wallet_network, select_account};
 use crate::data::get_db_paths;
 use crate::send::send_txn;
 use crate::sync::sync;
+use crate::{balance::wallet_balance, txn::txn_list};
 // use crate::{config::WalletConfig, remote::Servers};
 
 mod balance;
@@ -33,6 +33,7 @@ mod error;
 mod remote;
 mod send;
 mod sync;
+mod txn;
 
 pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
     let wallet_dir = Some(wallet_name.to_owned());
@@ -133,11 +134,11 @@ pub struct VAccount {
 }
 
 pub struct VAccountAddress {
-    pub uuid: String,
-    pub address: String,
+    pub t_address: String,
+    pub u_address: String,
 }
 
-pub fn get_address(wallet_name: String, uuid: String) -> Result<String, anyhow::Error> {
+pub fn get_address(wallet_name: String, uuid: String) -> Result<VAccountAddress, anyhow::Error> {
     let wallet_dir: Option<String> = Some(wallet_name.to_owned());
     let params = get_wallet_network(wallet_dir.as_ref())?;
     let (_, db_data) = get_db_paths(wallet_dir.as_ref());
@@ -148,23 +149,22 @@ pub fn get_address(wallet_name: String, uuid: String) -> Result<String, anyhow::
         .uivk()
         .default_address(UnifiedAddressRequest::AllAvailableKeys)?;
 
-   
-    println!(
-        "t-address {}",
-        ua.transparent()
-            .unwrap()
-            .to_zcash_address(params.network_type())
-    );
-    println!("z-address {:?}", ua.orchard().unwrap());
-
-    /// Note: below gives same thing
+    // Note: below also gives Unified address
     // ua.to_zcash_address(params.network_type()).to_string();
-    Ok(ua.encode(&params))
+    Ok(VAccountAddress {
+        u_address: ua.encode(&params),
+        t_address: ua
+            .transparent()
+            .unwrap()
+            .to_zcash_address(params.network_type()).to_string(),
+    })
 }
 
 pub fn list_accounts(wallet_name: String) -> Result<Vec<VAccount>, anyhow::Error> {
     let wallet_dir: Option<String> = Some(wallet_name.to_owned());
     let params = get_wallet_network(wallet_dir.as_ref())?;
+
+    //  zcash_primitives::transaction::Transaction::read(reader, consensus_branch_id)
 
     let (_, db_data) = get_db_paths(wallet_dir.as_ref());
     let db_data = WalletDb::for_path(db_data, params, (), ())?;
@@ -240,6 +240,13 @@ pub struct CAccount {
 }
 
 #[repr(C)]
+pub struct CAddress {
+    t_address: *mut c_char,
+    u_address: *mut c_char,
+}
+
+
+#[repr(C)]
 pub struct CAccountArray {
     ptr: *mut CAccount,
     len: usize,
@@ -300,11 +307,14 @@ pub extern "C" fn go_list_accounts(ptr: *const std::os::raw::c_char) -> CAccount
     }
 }
 
+
+
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn go_get_address(
     ptr: *const std::os::raw::c_char,
     uuid: *const std::os::raw::c_char,
-) -> *mut c_char {
+) -> CAddress {
     unsafe {
         let c_ptr_str = std::ffi::CStr::from_ptr(ptr);
         let wallet_dir = c_ptr_str.to_str().expect("Invalid Utf-8");
@@ -312,15 +322,37 @@ pub unsafe extern "C" fn go_get_address(
         let c_uuid_str = std::ffi::CStr::from_ptr(uuid);
         let uuid_str = c_uuid_str.to_str().expect("Invalid Utf-8");
 
-        let rust_string = get_address(wallet_dir.to_owned(), uuid_str.to_owned()).unwrap();
+        let acc_address = get_address(wallet_dir.to_owned(), uuid_str.to_owned());
         // Convert Rust String to C string
-        let c_string = match CString::new(rust_string) {
-            Ok(s) => s,
-            Err(_) => return std::ptr::null_mut(),
+        // let c_string = 
+    
+        match acc_address {
+            Ok(a) => {
+               let t_address =
+                match CString::new(a.t_address) {
+                    Ok(t) => t.into_raw(),
+                    Err(_) =>  { CString::new("").unwrap().into_raw() }
+                };
+
+                let u_address =  match CString::new(a.u_address) {
+                    Ok(t) => t.into_raw(),
+                    Err(_) =>  { CString::new("").unwrap().into_raw() }
+                };
+
+                return CAddress{ 
+                    t_address,
+                    u_address
+                };
+            } ,
+            Err(_) => {}
         };
 
         // Transfer ownership to caller
-        c_string.into_raw()
+        // c_string.into_raw()
+        return CAddress{
+            t_address : CString::new("").unwrap().into_raw(),
+            u_address : CString::new("").unwrap().into_raw()
+        };
     }
 }
 
@@ -446,6 +478,39 @@ pub unsafe extern "C" fn go_send_txn(
         }
     }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn go_get_txn_list(
+    ptr: *const std::os::raw::c_char,
+    uuid: *const std::os::raw::c_char,
+) {
+    unsafe {
+        let c_ptr_str = std::ffi::CStr::from_ptr(ptr);
+        let wallet_dir = c_ptr_str.to_str().expect("Invalid Utf-8");
+
+        let c_uuid_str = std::ffi::CStr::from_ptr(uuid);
+        let uuid_str = c_uuid_str.to_str().expect("Invalid Utf-8");
+
+        let account_id = Some(Uuid::from_str(uuid_str).expect("wrong UUid"));
+        //let rust_string =
+        let result = txn_list(wallet_dir.to_owned(), account_id);
+
+        if result.is_err() {
+            println!("Failed to create wallet")
+        }
+        // Convert Rust String to C string
+        /*
+        let c_string = match CString::new(rust_string) {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        // Transfer ownership to caller
+        c_string.into_raw()
+        */
+    }
+}
+
 //~~~~ free memory
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_string(s: *mut c_char) {

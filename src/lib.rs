@@ -35,9 +35,15 @@ mod send;
 mod sync;
 mod txn;
 
-pub async fn create_wallet(wallet_name: String) -> Result<(), anyhow::Error> {
+pub async fn create_wallet(wallet_name: String, network : bool) -> Result<(), anyhow::Error> {
     let wallet_dir = Some(wallet_name.to_owned());
-    let network = consensus::Network::TestNetwork;
+
+    let network = if network {
+        consensus::Network::MainNetwork
+     }else {
+        consensus::Network::TestNetwork
+     };
+
     let params = consensus::Network::from(network);
 
     let server = remote::Servers::parse("zecrocks")?; //Servers::pick(&self, network) //Servers.pick(params)?;
@@ -261,14 +267,16 @@ pub struct CBalance {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn go_create_wallet(ptr: *const std::os::raw::c_char) {
+pub extern "C" fn go_create_wallet(ptr: *const std::os::raw::c_char, network: u32 ) {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     unsafe {
         let c_str = std::ffi::CStr::from_ptr(ptr);
         let r_str = c_str.to_str().expect("Invalid Utf-8");
 
-        let result = rt.block_on(create_wallet(r_str.to_string()));
+        let c_network = network != 0;
+
+        let result = rt.block_on(create_wallet(r_str.to_string(), c_network));
 
         if result.is_err() {
             println!("Failed to create wallet")

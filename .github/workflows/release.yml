@@ -6,7 +6,12 @@ on:
 jobs:
   build:
     name: build for all platforms
-    runs-on: ubuntu-latest
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
     env:
       CARGO_TERM_COLOR: always
       BINARY_NAME: librust_ffi_go.dylib

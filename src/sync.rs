@@ -267,13 +267,9 @@ async fn download_blocks(
     fsblockdb_root: &Path,
     db_cache: &FsBlockDb,
     scan_range: &ScanRange,
-    #[cfg(feature = "tui")] tui_handle: Option<&defrag::AppHandle>,
 ) -> Result<Vec<BlockMeta>, anyhow::Error> {
     info!("Fetching {}", scan_range);
-    #[cfg(feature = "tui")]
-    if let Some(handle) = tui_handle {
-        handle.set_fetching_range(Some(scan_range.block_range().clone()));
-    }
+
     let mut start = service::BlockId::default();
     start.height = scan_range.block_range().start.into();
     let mut end = service::BlockId::default();
@@ -308,11 +304,6 @@ async fn download_blocks(
             let mut block_file = File::create(get_block_path(fsblockdb_root, &meta)).await?;
             block_file.write_all(&encoded).await?;
 
-            #[cfg(feature = "tui")]
-            if let Some(handle) = tui_handle {
-                handle.set_fetched(block.height());
-            }
-
             Ok(meta)
         });
     tokio::pin!(block_meta_stream);
@@ -326,10 +317,6 @@ async fn download_blocks(
         .write_block_metadata(&block_meta)
         .map_err(error::Error::from)?;
 
-    #[cfg(feature = "tui")]
-    if let Some(handle) = tui_handle {
-        handle.set_fetching_range(None);
-    }
     Ok(block_meta)
 }
 

@@ -35,7 +35,7 @@ jobs:
       with:
         repo_token: ${{ secrets.PAT_TOKEN }}
         file: target/release/${{ env.BINARY_NAME }}
-        asset_name: ${{ env.BINARY_NAME }}-apple-darwin
+        asset_name: ${{ env.BINARY_NAME }}
         target_commit: ${{ github.sha }}
         tag: v${{ env.RELEASE_VERSION }}
         release_name: v${{ env.RELEASE_VERSION }}

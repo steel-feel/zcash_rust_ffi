@@ -16,10 +16,13 @@ jobs:
       CARGO_TERM_COLOR: always
       BINARY_NAME: librust_ffi_go.dylib
     steps:
-    - name: Build-musl macOS arch
-      uses: Shogan/rust-musl-action@v1.0.2
+    - uses: actions/checkout@v4
+    - name: Install Rust toolchain + target
+      uses: dtolnay/rust-toolchain@stable
       with:
-        args: cargo build --target aarch64-apple-darwin --release
+          targets: ${{ matrix.target }}
+    - name: Build (release)
+      run: cargo build --release
     - name: Set build version
       id: version
       shell: bash

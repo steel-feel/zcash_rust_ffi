@@ -34,7 +34,7 @@ jobs:
       uses: Spikatrix/upload-release-action@b713c4b73f0a8ddda515820c124efc6538685492
       with:
         repo_token: ${{ secrets.PAT_TOKEN }}
-        file: target/aarch64-apple-darwin/release/${{ env.BINARY_NAME }}
+        file: target/release/${{ env.BINARY_NAME }}
         asset_name: ${{ env.BINARY_NAME }}-apple-darwin
         target_commit: ${{ github.sha }}
         tag: v${{ env.RELEASE_VERSION }}

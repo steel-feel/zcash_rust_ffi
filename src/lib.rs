@@ -264,6 +264,7 @@ pub struct CBalance {
     total: u64,
     orchard: u64,
     unshielded: u64,
+    sapling: u64
 }
 
 #[unsafe(no_mangle)]
@@ -404,15 +405,17 @@ pub unsafe extern "C" fn go_balance(
                 total: 0,
                 orchard: 0,
                 unshielded: 0,
+                sapling:0
             };
         }
 
         let balance = result.unwrap();
         return CBalance {
-            height: CString::new(balance.height).unwrap().into_raw(),
+            height: CString::new(balance.height).expect("height error").into_raw(),
             total: balance.total,
             orchard: balance.orchard,
             unshielded: balance.unshielded,
+            sapling: balance.sapling
         };
     }
 }

@@ -15,6 +15,7 @@ pub struct Balance {
     pub height: String,
     pub unshielded: u64,
     pub orchard: u64,
+    pub sapling: u64,
     pub total: u64,
 }
 
@@ -35,10 +36,13 @@ pub async fn wallet_balance(
             .get(&account.id())
             .ok_or_else(|| anyhow!("Missing account 0"))?;
 
+            
+
         return Ok(Balance {
             height: wallet_summary.chain_tip_height().to_string(),
             unshielded: balance.unshielded_balance().spendable_value().into_u64(),
             orchard: balance.orchard_balance().spendable_value().into_u64(),
+            sapling: balance.sapling_balance().spendable_value().into_u64(),
             total: balance.total().into_u64(),
         });
     } else {
